@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Csv File Search Tool</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Tone.js for sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <!-- Use Inter font -->
+    <style>
+        html {
+            color-scheme: dark;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Ensure canvas doesn't create scrollbars */
+            overflow-x: hidden;
+        }
+
+        /* Background Animation Canvas */
+        #bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Place it behind all content */
+        }
+
+        /* Custom scrollbar for results (Dark Theme) */
+        .results-table::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .results-table::-webkit-scrollbar-track {
+            background: #2d3748; /* gray-800 */
+            border-radius: 10px;
+        }
+        .results-table::-webkit-scrollbar-thumb {
+            background: #dd6b20; /* orange-600 */
+            border-radius: 10px;
+        }
+        .results-table::-webkit-scrollbar-thumb:hover {
+            background: #c05621; /* orange-700 */
+        }
+
+        /* Added transitions for inputs */
+        input[type="text"],
+        select {
+            transition: all 0.2s ease-in-out;
+        }
+
+        /* Added "live" focus effect */
+        input[type="text"]:focus,
+        select:focus {
+            transform: scale(1.01);
+            box-shadow: 0 0 15px rgba(221, 107, 32, 0.5); /* Orange glow */
+        }
+    </style>
+</head>
+<!-- Updated body with dark theme -->
+<body class="bg-gray-900 text-gray-200 min-h-screen py-10 px-4">
+
+    <!-- Canvas for background animation -->
+    <canvas id="bg-animation"></canvas>
+
+    <!-- Main card: Added relative positioning for z-index context -->
+    <div class="max-w-6xl mx-auto p-6 sm:p-8 bg-gray-800 rounded-2xl shadow-xl relative z-10">
+        
+        <!-- Header Section: Centered layout -->
+        <div class="flex flex-col items-center mb-6">
+            <!-- Logo -->
+            <img src="Entertainment.png" alt="PixelForge Entertainment Logo" class="w-32 rounded-lg mb-4"
+                 onerror="this.style.display='none';">
+
+            <!-- Titles (Centered) -->
+            <div class="text-center">
+                <!-- Title -->
+                <h1 class="text-3xl font-bold text-white mb-2">
+                    Csv File Search Tool
+                </h1>
+                <!-- Sub-title/Creator Name -->
+                <p class="text-orange-500 font-medium">
+                    Created by Surya Kamal N D
+                </p>
+            </div>
+        </div>
+
+        <!-- Section 1: File Upload -->
+        <div class="border-b border-gray-700 pb-6 mb-6">
+            <label for="file-upload" class="block text-sm font-medium text-gray-300 mb-2">
+                Upload your CSV file
+            </label>
+            <!-- Updated file input styling -->
+            <input id="file-upload" type="file" accept=".csv" class="block w-full text-sm text-gray-300
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-lg file:border-0
+                file:text-sm file:font-semibold
+                file:bg-orange-600 file:text-white
+                hover:file:bg-orange-700
+                border border-gray-600 rounded-lg cursor-pointer bg-gray-700
+                focus:outline-none focus:ring-2 focus:ring-orange-500
+            "/>
+            
+            <p id="file-name-display" class="text-sm text-gray-400 mt-3 text-center"></p>
+        </div>
+
+        <!-- Section 2: Search Controls -->
+        <div id="search-controls" class="hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Column Select -->
+                <div>
+                    <label for="search-column" class="block text-sm font-medium text-gray-300">
+                        Search In
+                    </label>
+                    <!-- Updated select styling -->
+                    <select id="search-column" class="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-700 border-gray-600 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md shadow-sm text-white">
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+                <!-- Search Term Input -->
+                <div>
+                    <label for="search-term" class="block text-sm font-medium text-gray-300">
+                        Search For
+                    </label>
+                    <!-- Updated input styling -->
+                    <input type="text" id="search-term" placeholder="Enter search value..." class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm text-white placeholder-gray-400">
+                </div>
+            </div>
+
+            <!-- Search Options -->
+            <div class="flex flex-wrap gap-x-6 gap-y-2 mt-4 items-center">
+                <span class="text-sm font-medium text-gray-300">Options:</span>
+                <!-- Updated checkbox styling -->
+                <label class="flex items-center text-sm text-gray-300">
+                    <input id="ignore-case" type="checkbox" checked class="h-4 w-4 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500">
+                    <span class="ml-2">Ignore Case</span>
+                </label>
+                <label class="flex items-center text-sm text-gray-300">
+                    <input id="ignore-whitespace" type="checkbox" class="h-4 w-4 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500">
+                    <span class="ml-2">Ignore White Spaces</span>
+                </label>
+                <label class="flex items-center text-sm text-gray-300">
+                    <input id="partial-match" type="checkbox" checked class="h-4 w-4 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500">
+                    <span class="ml-2">Partial Match (Contains)</span>
+                </label>
+            </div>
+
+            <!-- Search Button -->
+            <!-- Updated button styling -->
+            <button id="search-button" class="mt-6 w-full bg-orange-600 text-white py-2 px-4 rounded-lg font-semibold shadow-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-75 transition duration-150 transform hover:scale-105">
+                Search
+            </button>
+        </div>
+
+        <!-- Section 3: Results Display -->
+        <div id="results-area" class="hidden mt-8">
+            <h3 id="results-count" class="text-lg font-semibold text-gray-200 mb-2"></h3>
+            <!-- Table container -->
+            <div class="border border-gray-700 rounded-lg overflow-hidden shadow-sm">
+                <div class="results-table max-h-[60vh] overflow-auto">
+                    <!-- Updated table styling -->
+                    <table class="min-w-full divide-y divide-gray-700">
+                        <thead id="table-head" class="bg-gray-700 sticky top-0">
+                            <!-- Header row will be populated by JS -->
+                        </thead>
+                        <tbody id="table-body" class="bg-gray-800 divide-y divide-gray-700">
+                            <!-- Data rows will be populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer Added -->
+    <footer class="max-w-6xl mx-auto mt-8 text-center text-gray-400 text-sm relative z-10">
+        <p class="font-semibold text-orange-500 mb-2">PixelForge Entertainment</p>
+        <div class="flex justify-center space-x-6">
+            <a href="https://www.linkedin.com/company/pixelforge-entertainment/" target="_blank" rel="noopener noreferrer" class="hover:text-orange-400 transition duration-150">
+                LinkedIn
+            </a>
+            <a href="https://www.youtube.com/@Pixel-Forge-Entertainment" target="_blank" rel="noopener noreferrer" class="hover:text-orange-400 transition duration-150">
+                YouTube
+            </a>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- Sound Effect Setup ---
+            let audioStarted = false;
+            // Create synths for different sounds
+            const clickSynth = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+            }).toDestination();
+            
+            const uploadSynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: 'fatsawtooth' },
+                envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 }
+            }).toDestination();
+            uploadSynth.volume.value = -6;
+
+            const resultSynth = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 }
+            }).toDestination();
+
+            // Web Audio API requires user interaction to start
+            document.body.addEventListener('click', async () => {
+                if (!audioStarted) {
+                    await Tone.start();
+                    console.log('AudioContext started');
+                    audioStarted = true;
+                }
+            }, { once: true });
+
+
+            // --- Background Animation Setup ---
+            const canvas = document.getElementById('bg-animation');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            let particles = [];
+            const particleColors = ['#f97316', '#ea580c', '#c2410c', '#4a5568']; // Oranges + Gray
+
+            class Particle {
+                constructor(x, y, radius, color, velocity) {
+                    this.x = x;
+                    this.y = y;
+                    this.radius = radius;
+                    this.color = color;
+                    this.velocity = velocity;
+                }
+
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                    ctx.closePath();
+                }
+
+                update() {
+                    // Edge detection
+                    if (this.x + this.radius > canvas.width || this.x - this.radius < 0) {
+                        this.velocity.x = -this.velocity.x;
+                    }
+                    if (this.y + this.radius > canvas.height || this.y - this.radius < 0) {
+                        this.velocity.y = -this.velocity.y;
+                    }
+                    this.x += this.velocity.x;
+                    this.y += this.velocity.y;
+                    this.draw();
+                }
+            }
+
+            function initParticles() {
+                particles = [];
+                let numberOfParticles = (canvas.height * canvas.width) / 9000;
+                for (let i = 0; i < numberOfParticles; i++) {
+                    let radius = Math.random() * 2 + 1;
+                    let x = Math.random() * (canvas.width - radius * 2) + radius;
+                    let y = Math.random() * (canvas.height - radius * 2) + radius;
+                    let color = particleColors[Math.floor(Math.random() * particleColors.length)];
+                    let velocity = {
+                        x: (Math.random() - 0.5) * 0.5,
+                        y: (Math.random() - 0.5) * 0.5
+                    };
+                    particles.push(new Particle(x, y, radius, color, velocity));
+                }
+            }
+
+            function animateParticles() {
+                requestAnimationFrame(animateParticles);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < particles.length; i++) {
+                    particles[i].update();
+                }
+            }
+
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                initParticles();
+            });
+
+            // Start animation
+            initParticles();
+            animateParticles();
+
+
+            // --- Global Variables (CSV) ---
+            let allData = [];
+            let headers = [];
+
+            // --- DOM Elements (CSV) ---
+            const fileInput = document.getElementById('file-upload');
+            const fileNameDisplay = document.getElementById('file-name-display');
+            const searchControls = document.getElementById('search-controls');
+            const searchColumn = document.getElementById('search-column');
+            const searchTerm = document.getElementById('search-term');
+            const ignoreCaseCheck = document.getElementById('ignore-case');
+            const ignoreWhitespaceCheck = document.getElementById('ignore-whitespace');
+            const partialMatchCheck = document.getElementById('partial-match');
+            const searchButton = document.getElementById('search-button');
+            const resultsArea = document.getElementById('results-area');
+            const resultsCount = document.getElementById('results-count');
+            const tableHead = document.getElementById('table-head');
+            const tableBody = document.getElementById('table-body');
+            
+            // --- Event Listeners (CSV) ---
+            fileInput.addEventListener('change', handleFileUpload);
+            
+            searchButton.addEventListener('click', () => {
+                // Play sound
+                if (audioStarted) {
+                    clickSynth.triggerAttackRelease('C4', '8n');
+                }
+                performSearch();
+            });
+            
+            searchTerm.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+
+            // --- Functions (CSV) ---
+
+            /**
+             * Handles the file upload event.
+             */
+            function handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) {
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    processCSV(text);
+                    fileNameDisplay.textContent = `Loaded: ${file.name}`;
+                    // Play sound on successful load
+                    if (audioStarted) {
+                        uploadSynth.triggerAttackRelease(['C4', 'E4', 'G4'], '8n');
+                    }
+                };
+                reader.onerror = (e) => {
+                    console.error('Error reading file:', e);
+                    fileNameDisplay.textContent = 'Error reading file.';
+                };
+                reader.readAsText(file);
+            }
+
+            /**
+             * Parses the raw CSV text into data structures.
+             */
+            function processCSV(csvText) {
+                if (!csvText || csvText.trim().length < 1) {
+                    console.error('CSV file is empty or invalid.');
+                    fileNameDisplay.textContent = 'CSV file is empty or invalid.';
+                    return;
+                }
+
+                const lines = csvText.trim().split('\n');
+                
+                allData = [];
+                headers = [];
+
+                if (lines.length === 0) {
+                    console.error('CSV file is empty.');
+                    return;
+                }
+
+                headers = lines[0].split(',').map(h => h.trim());
+                
+                for (let i = 1; i < lines.length; i++) {
+                    if (!lines[i] || lines[i].trim().length === 0) {
+                        continue;
+                    }
+
+                    const values = lines[i].split(',');
+                    if (values.length === headers.length) {
+                        const row = {};
+                        for (let j = 0; j < headers.length; j++) {
+                            row[headers[j]] = values[j] ? values[j].trim() : '';
+                        }
+                        allData.push(row);
+                    } else {
+                        console.warn(`Skipping malformed row ${i + 1}: Expected ${headers.length} columns, found ${values.length}`);
+                    }
+                }
+
+                populateSearchOptions();
+                searchControls.classList.remove('hidden');
+                displayResults(allData, true); // Pass flag to indicate initial load
+                resultsArea.classList.remove('hidden');
+            }
+
+            /**
+             * Populates the "Search In" dropdown with CSV headers.
+             */
+            function populateSearchOptions() {
+                searchColumn.innerHTML = '';
+                const allOption = document.createElement('option');
+                allOption.value = 'all';
+                allOption.textContent = 'All Fields';
+                searchColumn.appendChild(allOption);
+
+                headers.forEach(header => {
+                    if (header) {
+                        const option = document.createElement('option');
+                        option.value = header;
+                        option.textContent = header;
+                        searchColumn.appendChild(option);
+                    }
+                });
+            }
+
+            /**
+             * Filters the data based on search criteria and displays it.
+             */
+            function performSearch() {
+                let query = searchTerm.value;
+                const column = searchColumn.value;
+                const ignoreCase = ignoreCaseCheck.checked;
+                const ignoreWhitespace = ignoreWhitespaceCheck.checked;
+                const partialMatch = partialMatchCheck.checked;
+
+                if (ignoreWhitespace) {
+                    query = query.replace(/\s/g, '');
+                }
+                if (ignoreCase) {
+                    query = query.toLowerCase();
+                }
+
+                if (!query) {
+                    displayResults(allData);
+                    return;
+                }
+
+                const filteredData = allData.filter(row => {
+                    if (column === 'all') {
+                        return Object.values(row).some(value => 
+                            checkMatch(value, query, ignoreCase, ignoreWhitespace, partialMatch)
+                        );
+                    } else {
+                        const value = row[column];
+                        return checkMatch(value, query, ignoreCase, ignoreWhitespace, partialMatch);
+                    }
+                });
+
+                displayResults(filteredData);
+            }
+
+            /**
+             * Helper function to check if a cell value matches the query.
+             */
+            function checkMatch(value, query, ignoreCase, ignoreWhitespace, partialMatch) {
+                if (value === null || value === undefined) {
+                    value = '';
+                }
+                
+                let cellValue = String(value);
+
+                if (ignoreWhitespace) {
+                    cellValue = cellValue.replace(/\s/g, '');
+                }
+                if (ignoreCase) {
+                    cellValue = cellValue.toLowerCase();
+                }
+
+                if (partialMatch) {
+                    return cellValue.includes(query);
+                } else {
+                    return cellValue === query;
+                }
+            }
+
+            /**
+             * Renders the data in the HTML table.
+             * @param {Array} data - The data to display.
+             * @param {boolean} [isInitialLoad=false] - Flag to prevent playing sound on first load.
+             */
+            function displayResults(data, isInitialLoad = false) {
+                tableHead.innerHTML = '';
+                tableBody.innerHTML = '';
+                resultsCount.textContent = `${data.length} results found`;
+
+                // Create header row
+                const headerRow = document.createElement('tr');
+                headers.forEach(header => {
+                    const th = document.createElement('th');
+                    th.scope = 'col';
+                    th.className = 'px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider';
+                    th.textContent = header;
+                    headerRow.appendChild(th);
+                });
+                tableHead.appendChild(headerRow);
+
+                // Handle no results
+                if (data.length === 0) {
+                    // Play "no results" sound
+                    if (audioStarted && !isInitialLoad) {
+                        resultSynth.triggerAttackRelease('C3', '8n');
+                    }
+                    const tr = document.createElement('tr');
+                    const td = document.createElement('td');
+                    td.colSpan = headers.length;
+                    td.className = 'px-4 py-4 text-center text-gray-400';
+                    td.textContent = 'No results found.';
+                    tr.appendChild(td);
+                    tableBody.appendChild(tr);
+                    return;
+                }
+
+                // Play "results found" sound (only if it's a search, not initial load)
+                if (audioStarted && !isInitialLoad) {
+                     resultSynth.triggerAttackRelease('E5', '16n');
+                }
+
+                // Create data rows
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-700';
+                    headers.forEach(header => {
+                        const td = document.createElement('td');
+                        td.className = 'px-4 py-4 whitespace-nowrap text-sm text-gray-200';
+                        td.textContent = row[header];
+                        tr.appendChild(td);
+                    });
+                    tableBody.appendChild(tr);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+
